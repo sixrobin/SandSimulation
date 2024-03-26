@@ -31,7 +31,8 @@ namespace SandSimulation
         
         protected RenderTexture _result;
         protected RenderTexture _gridBuffer;
-        
+        protected Texture2D _sandToSpawn;
+
         private RenderTexture CreateTexture()
         {
             RenderTexture texture = new(this._resolution, this._resolution, 0, RenderTextureFormat.ARGB32)
@@ -42,6 +43,18 @@ namespace SandSimulation
             };
 
             texture.Create();
+            return texture;
+        }
+        
+        private Texture2D CreateTexture2D()
+        {
+            Texture2D texture = new Texture2D(this._resolution, this._resolution, TextureFormat.RFloat, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+
+            texture.Apply();
             return texture;
         }
         
@@ -58,9 +71,11 @@ namespace SandSimulation
             
             this._result = this.CreateTexture();
             this._gridBuffer = this.CreateTexture();
+            this._sandToSpawn = this.CreateTexture2D();
             this._renderer.material.SetTexture("_MainTex", this._result);
             
             this._computeShader.SetTexture(this._initKernelIndex, RESULT_ID, this._gridBuffer);
+            
             this._computeShader.Dispatch(this._initKernelIndex, this._threadGroups, this._threadGroups, 1);
 
             this._computeShader.SetTexture(this._applyBufferKernelIndex, RESULT_ID, this._result);
@@ -72,9 +87,14 @@ namespace SandSimulation
         {
             this._computeShader.SetTexture(this._nextKernelIndex, RESULT_ID, this._result);
             this._computeShader.SetTexture(this._nextKernelIndex, GRID_BUFFER_ID, this._gridBuffer);
+            this._computeShader.SetTexture(this._nextKernelIndex, "_SandToSpawn", this._sandToSpawn);
+
             this._computeShader.Dispatch(this._nextKernelIndex, this._threadGroups, this._threadGroups, 1);
 
             this.ApplyTextureBuffer();
+            
+            // TODO: Do not recreate it each time, clear instead.
+            this._sandToSpawn = this.CreateTexture2D();
         }
         
         private void ApplyTextureBuffer()
@@ -86,9 +106,8 @@ namespace SandSimulation
 
         public void SpawnSand(Vector2 uv)
         {
-            // TODO: Store sand to spawn in a separate texture.
-            // TODO: When iterating, check if a sand has to be spawn at each ID, and if so, spawn it.
-            // TODO: After each iteration, clear the texture storing sand to spawn.
+            this._sandToSpawn.SetPixel(Mathf.FloorToInt(uv.x * this._resolution), Mathf.FloorToInt(uv.y * this._resolution), Color.white);
+            this._sandToSpawn.Apply();
         }
         
         #region UNITY METHODS

@@ -154,7 +154,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _computeShader: {fileID: 7200000, guid: 52c5c6b3448079446b988166d1586c93, type: 3}
   _resolution: 64
-  _iterationDelay: 0.05
+  _iterationDelay: 0.02
   _renderer: {fileID: 464122502}
 --- !u!23 &464122502
 MeshRenderer:
@@ -282,7 +282,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _camera: {fileID: 2010694352}
-  _hitbox: {fileID: 464122505}
+  _collider: {fileID: 464122505}
+  _simulation: {fileID: 464122501}
 --- !u!1 &2010694350
 GameObject:
   m_ObjectHideFlags: 0
