@@ -1,0 +1,48 @@
+#pragma kernel Init
+#pragma kernel Next
+#pragma kernel ApplyBuffer
+
+#include "Random.cginc"
+
+float _Resolution;
+RWTexture2D<float4> _Result;
+sampler2D _GridBuffer;
+
+float4 GetUV(uint3 id)
+{
+    return float4(id.xy / _Resolution, 0, 0);
+}
+
+float SampleNeighbour(float4 position, float dx, float dy)
+{
+    return step(0.5, tex2Dlod(_GridBuffer, position + float4(dx, dy, 0, 0)).x);
+}
+
+void ApplyBuffer(uint2 uv)
+{
+    float4 pos = float4(uv / _Resolution, 0, 0);
+    float4 buffer = tex2Dlod(_GridBuffer, pos);
+    _Result[uv] = buffer;
+}
+
+[numthreads(8,8,1)]
+void Init(uint3 id : SV_DispatchThreadID)
+{
+    float halfResolution = _Resolution * 0.5;
+    int3 sid = id; // Use signed ID to avoid console warnings.
+    int state = sid.x == halfResolution && sid.y == halfResolution ? 1 : 0;
+    
+    _Result[id.xy] = float4(state.xxx, 1);
+}
+
+[numthreads(8,8,1)]
+void Next(uint3 id : SV_DispatchThreadID)
+{
+    // _Result[id.xy] = float4(hash23(id), 1);
+}
+
+[numthreads(8,8,1)]
+void ApplyBuffer(uint3 id : SV_DispatchThreadID)
+{
+    ApplyBuffer(id.xy);
+}
