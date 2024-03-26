@@ -2,8 +2,6 @@
 #pragma kernel Next
 #pragma kernel ApplyBuffer
 
-#include "Random.cginc"
-
 float _Resolution;
 RWTexture2D<float4> _Result;
 sampler2D _GridBuffer;

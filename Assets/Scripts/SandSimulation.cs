@@ -2,6 +2,7 @@ namespace SandSimulation
 {
     using UnityEngine;
 
+    [DisallowMultipleComponent]
     public class SandSimulation : MonoBehaviour
     {
         private const string KERNEL_NAME_INIT = "Init";
@@ -81,6 +82,13 @@ namespace SandSimulation
             this._computeShader.SetTexture(this._applyBufferKernelIndex, RESULT_ID, this._gridBuffer);
             this._computeShader.SetTexture(this._applyBufferKernelIndex, GRID_BUFFER_ID, this._result);
             this._computeShader.Dispatch(this._applyBufferKernelIndex, this._threadGroups, this._threadGroups, 1);
+        }
+
+        public void SpawnSand(Vector2 uv)
+        {
+            // TODO: Store sand to spawn in a separate texture.
+            // TODO: When iterating, check if a sand has to be spawn at each ID, and if so, spawn it.
+            // TODO: After each iteration, clear the texture storing sand to spawn.
         }
         
         #region UNITY METHODS
