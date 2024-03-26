@@ -25,12 +25,30 @@ void ApplyBuffer(uint2 uv)
     _Result[uv] = buffer;
 }
 
+bool CanFall(uint3 id)
+{
+    int y = id.y;
+    
+    while (y >= 0)
+    {
+        float4 uv = GetUV(uint3(id.x, y, id.y));
+        float state = tex2Dlod(_GridBuffer, uv).r;
+
+        if (state == 0)
+            return true;
+        
+        y--;
+    }
+    
+    return false;
+}
+
 [numthreads(8,8,1)]
 void Init(uint3 id : SV_DispatchThreadID)
 {
     float halfResolution = _Resolution * 0.5;
     int3 sid = id; // Use signed ID to avoid console warnings.
-    int state = sid.x == halfResolution && sid.y == halfResolution ? 1 : 0;
+    int state = sid.x == halfResolution && (sid.y == halfResolution || sid.y == halfResolution * 0.5) ? 1 : 0;
     
     _Result[id.xy] = float4(state.xxx, 1);
 }
@@ -50,7 +68,7 @@ void Next(uint3 id : SV_DispatchThreadID)
     }
     else if (state == 1)
     {
-        if (id.y > 0)
+        if (CanFall(id))
             state = 0;
     }
     
