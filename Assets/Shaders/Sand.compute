@@ -43,13 +43,15 @@ void Next(uint3 id : SV_DispatchThreadID)
     float upState = SampleNeighbour(uv, 0, delta).r;
     float state = tex2Dlod(_GridBuffer, uv).r;
 
-    if (state == 0 && upState == 1)
+    if (state == 0)
     {
-        state = 1;
+        if (upState == 1)
+            state = 1;
     }
     else if (state == 1)
     {
-        state = 0;
+        if (id.y > 0)
+            state = 0;
     }
     
     _Result[id.xy] = float4(state.xxx, 1);
