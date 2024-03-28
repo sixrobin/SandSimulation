@@ -1,5 +1,6 @@
 #pragma kernel Init
 #pragma kernel Next
+#pragma kernel ClearGreenChannel
 #pragma kernel ApplyBuffer
 
 float _Resolution;
@@ -12,9 +13,9 @@ float4 GetUV(uint3 id)
     return float4(id.xy / _Resolution, 0, 0);
 }
 
-float SampleNeighbour(float4 position, float dx, float dy)
+float4 SampleNeighbour(float4 position, float dx, float dy)
 {
-    return tex2Dlod(_GridBuffer, position + float4(dx, dy, 0, 0)).x;
+    return tex2Dlod(_GridBuffer, position + float4(dx, dy, 0, 0));
 }
 
 void ApplyBuffer(uint2 uv)
@@ -57,24 +58,41 @@ void Next(uint3 id : SV_DispatchThreadID)
 {
     float4 uv = GetUV(id);
     float delta = 1.0 / _Resolution; // Cells neighbour distance.
-    float upState = SampleNeighbour(uv, 0, delta).r;
-    float state = tex2Dlod(_GridBuffer, uv).r;
+    
+    float4 state = tex2Dlod(_GridBuffer, uv);
+    float4 downState = SampleNeighbour(uv, 0, -delta);
+    float4 downRightState = SampleNeighbour(uv, delta, -delta);
+    float4 downLeftState = SampleNeighbour(uv, -delta, -delta);
 
-    if (state == 0)
+    if (uv.y > 0 && state.r == 1)
     {
-        if (upState == 1)
-            state = 1;
-    }
-    else if (state == 1)
-    {
-        if (CanFall(id))
-            state = 0;
+        if (downState.r == 0 && downState.g == 0)
+        {
+            _Result[id.xy] = float4(0,1,0,0);
+            _Result[id.xy - uint2(0, 1)] = float4(1,1,0,0);
+        }
+        else if (downRightState.r == 0 && downRightState.g == 0)
+        {
+            _Result[id.xy] = float4(0,1,0,0);
+            _Result[id.xy - uint2(-1, 1)] = float4(1,1,0,0);
+        }
+        else if (downLeftState.r == 0 && downLeftState.g == 0)
+        {
+            _Result[id.xy] = float4(0,1,0,0);
+            _Result[id.xy - uint2(1, 1)] = float4(1,1,0,0);
+        }
     }
     
-    if (state == 0 && tex2Dlod(_SandToSpawn, uv).r == 1)
-        state = 1;
-    
-    _Result[id.xy] = float4(state.xxx, 1);
+    if (state.r == 0 && tex2Dlod(_SandToSpawn, uv).r == 1)
+        _Result[id.xy] = float4(1,1,0,0);
+}
+
+[numthreads(8,8,1)]
+void ClearGreenChannel(uint3 id : SV_DispatchThreadID)
+{
+    float4 uv = GetUV(id);
+    float4 state = tex2Dlod(_GridBuffer, uv);
+    _Result[id.xy] = float4(state.x, 0, 0, 0);
 }
 
 [numthreads(8,8,1)]

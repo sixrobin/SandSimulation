@@ -24,6 +24,7 @@ namespace SandSimulation
         
         private int _initKernelIndex;
         private int _nextKernelIndex;
+        private int _clearGreenChannelKernelIndex;
         private int _applyBufferKernelIndex;
         
         private float _iterationTimer;
@@ -64,6 +65,7 @@ namespace SandSimulation
             
             this._initKernelIndex = this._computeShader.FindKernel(KERNEL_NAME_INIT);
             this._nextKernelIndex = this._computeShader.FindKernel(KERNEL_NAME_NEXT);
+            this._clearGreenChannelKernelIndex = this._computeShader.FindKernel("ClearGreenChannel");
             this._applyBufferKernelIndex = this._computeShader.FindKernel(KERNEL_NAME_APPLY_BUFFER);
             
             this._threadGroups = this._resolution / 8;
@@ -88,11 +90,17 @@ namespace SandSimulation
             this._computeShader.SetTexture(this._nextKernelIndex, RESULT_ID, this._result);
             this._computeShader.SetTexture(this._nextKernelIndex, GRID_BUFFER_ID, this._gridBuffer);
             this._computeShader.SetTexture(this._nextKernelIndex, "_SandToSpawn", this._sandToSpawn);
-
             this._computeShader.Dispatch(this._nextKernelIndex, this._threadGroups, this._threadGroups, 1);
 
             this.ApplyTextureBuffer();
             
+            this._computeShader.SetTexture(this._clearGreenChannelKernelIndex, RESULT_ID, this._result);
+            this._computeShader.SetTexture(this._clearGreenChannelKernelIndex, GRID_BUFFER_ID, this._gridBuffer);
+            this._computeShader.SetTexture(this._clearGreenChannelKernelIndex, "_SandToSpawn", this._sandToSpawn);
+            this._computeShader.Dispatch(this._clearGreenChannelKernelIndex, this._threadGroups, this._threadGroups, 1);
+            
+            this.ApplyTextureBuffer();
+
             // TODO: Do not recreate it each time, clear instead.
             this._sandToSpawn = this.CreateTexture2D();
         }

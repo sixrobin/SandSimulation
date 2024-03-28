@@ -2,6 +2,8 @@ Shader "Sand"
 {
     Properties
     {
+        _SandColor ("Sand Color", Color) = (1, 1, 0.25, 1)
+        _BackgroundColor ("Background Color", Color) = (0, 0, 0.1, 1)
         [HideInInspector] _MainTex ("Texture", 2D) = "white" {}
     }
     
@@ -35,6 +37,9 @@ Shader "Sand"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
+
+            float4 _SandColor;
+            float4 _BackgroundColor;
             
             v2f vert(appdata v)
             {
@@ -46,7 +51,8 @@ Shader "Sand"
 
             fixed4 frag(v2f i) : SV_Target
             {
-                return tex2D(_MainTex, i.uv);
+                float4 sandData = tex2D(_MainTex, i.uv);
+                return lerp(_BackgroundColor, _SandColor, sandData.x);
             }
             
             ENDCG
