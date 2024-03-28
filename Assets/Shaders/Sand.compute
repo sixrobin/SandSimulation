@@ -3,6 +3,8 @@
 #pragma kernel ClearGreenChannel
 #pragma kernel ApplyBuffer
 
+#include "Random.cginc"
+
 float _Resolution;
 RWTexture2D<float4> _Result;
 sampler2D _GridBuffer;
@@ -31,29 +33,48 @@ void Next(uint3 id : SV_DispatchThreadID)
     float delta = 1.0 / _Resolution; // Cells neighbour distance.
     
     float4 state = tex2Dlod(_GridBuffer, uv);
-    // TODO: Sample neighbours only in their condition branches to avoid unused computation.
-    float4 downState = SampleNeighbour(uv, 0, -delta);
-    float4 downRightState = SampleNeighbour(uv, delta, -delta);
-    float4 downLeftState = SampleNeighbour(uv, -delta, -delta);
 
     if (uv.y > 0 && state.r == 1)
     {
-        // TODO: Randomize between left and right.
-        
+        float4 downState = SampleNeighbour(uv, 0, -delta);
+
         if (downState.r == 0 && downState.g == 0)
         {
             _Result[id.xy] = float4(0, 1, 0, 0);
             _Result[id.xy - uint2(0, 1)] = float4(1, 1, 0, 0);
         }
-        else if (downRightState.r == 0 && downRightState.g == 0)
+        else
         {
-            _Result[id.xy] = float4(0, 1, 0, 0);
-            _Result[id.xy - uint2(-1, 1)] = float4(1, 1, 0, 0);
-        }
-        else if (downLeftState.r == 0 && downLeftState.g == 0)
-        {
-            _Result[id.xy] = float4(0, 1, 0, 0);
-            _Result[id.xy - uint2(1, 1)] = float4(1, 1, 0, 0);
+            float4 downRightState = SampleNeighbour(uv, delta, -delta);
+            float4 downLeftState = SampleNeighbour(uv, -delta, -delta);
+
+            // TODO: Factorize code inside if/else block.
+            if (random(id.xy) > 0.5)
+            {
+                if (downRightState.r == 0 && downRightState.g == 0)
+                {
+                    _Result[id.xy] = float4(0, 1, 0, 0);
+                    _Result[id.xy - uint2(-1, 1)] = float4(1, 1, 0, 0);
+                }
+                else if (downLeftState.r == 0 && downLeftState.g == 0)
+                {
+                    _Result[id.xy] = float4(0, 1, 0, 0);
+                    _Result[id.xy - uint2(1, 1)] = float4(1, 1, 0, 0);
+                }
+            }
+            else
+            {
+                if (downLeftState.r == 0 && downLeftState.g == 0)
+                {
+                    _Result[id.xy] = float4(0, 1, 0, 0);
+                    _Result[id.xy - uint2(1, 1)] = float4(1, 1, 0, 0);
+                }
+                else if (downRightState.r == 0 && downRightState.g == 0)
+                {
+                    _Result[id.xy] = float4(0, 1, 0, 0);
+                    _Result[id.xy - uint2(-1, 1)] = float4(1, 1, 0, 0);
+                }
+            }
         }
     }
     
