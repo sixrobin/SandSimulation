@@ -114,6 +114,7 @@ namespace SandSimulation
 
         public void SpawnSand(Vector2 uv)
         {
+            // TODO: Move this to a compute shader kernel (with the ability to use a brush/radius).
             this._sandToSpawn.SetPixel(Mathf.FloorToInt(uv.x * this._resolution), Mathf.FloorToInt(uv.y * this._resolution), Color.white);
             this._sandToSpawn.Apply();
         }

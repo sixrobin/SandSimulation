@@ -18,39 +18,10 @@ float4 SampleNeighbour(float4 position, float dx, float dy)
     return tex2Dlod(_GridBuffer, position + float4(dx, dy, 0, 0));
 }
 
-void ApplyBuffer(uint2 uv)
-{
-    float4 pos = float4(uv / _Resolution, 0, 0);
-    float4 buffer = tex2Dlod(_GridBuffer, pos);
-    _Result[uv] = buffer;
-}
-
-bool CanFall(uint3 id)
-{
-    int y = id.y;
-    
-    while (y >= 0)
-    {
-        float4 uv = GetUV(uint3(id.x, y, id.y));
-        float state = tex2Dlod(_GridBuffer, uv).r;
-
-        if (state == 0)
-            return true;
-        
-        y--;
-    }
-    
-    return false;
-}
-
 [numthreads(8,8,1)]
 void Init(uint3 id : SV_DispatchThreadID)
 {
-    float halfResolution = _Resolution * 0.5;
-    int3 sid = id; // Use signed ID to avoid console warnings.
-    int state = sid.x == halfResolution && (sid.y == halfResolution || sid.y == halfResolution * 0.5) ? 1 : 0;
-    
-    _Result[id.xy] = float4(state.xxx, 1);
+    _Result[id.xy] = 0;
 }
 
 [numthreads(8,8,1)]
@@ -60,31 +31,34 @@ void Next(uint3 id : SV_DispatchThreadID)
     float delta = 1.0 / _Resolution; // Cells neighbour distance.
     
     float4 state = tex2Dlod(_GridBuffer, uv);
+    // TODO: Sample neighbours only in their condition branches to avoid unused computation.
     float4 downState = SampleNeighbour(uv, 0, -delta);
     float4 downRightState = SampleNeighbour(uv, delta, -delta);
     float4 downLeftState = SampleNeighbour(uv, -delta, -delta);
 
     if (uv.y > 0 && state.r == 1)
     {
+        // TODO: Randomize between left and right.
+        
         if (downState.r == 0 && downState.g == 0)
         {
-            _Result[id.xy] = float4(0,1,0,0);
-            _Result[id.xy - uint2(0, 1)] = float4(1,1,0,0);
+            _Result[id.xy] = float4(0, 1, 0, 0);
+            _Result[id.xy - uint2(0, 1)] = float4(1, 1, 0, 0);
         }
         else if (downRightState.r == 0 && downRightState.g == 0)
         {
-            _Result[id.xy] = float4(0,1,0,0);
-            _Result[id.xy - uint2(-1, 1)] = float4(1,1,0,0);
+            _Result[id.xy] = float4(0, 1, 0, 0);
+            _Result[id.xy - uint2(-1, 1)] = float4(1, 1, 0, 0);
         }
         else if (downLeftState.r == 0 && downLeftState.g == 0)
         {
-            _Result[id.xy] = float4(0,1,0,0);
-            _Result[id.xy - uint2(1, 1)] = float4(1,1,0,0);
+            _Result[id.xy] = float4(0, 1, 0, 0);
+            _Result[id.xy - uint2(1, 1)] = float4(1, 1, 0, 0);
         }
     }
     
     if (state.r == 0 && tex2Dlod(_SandToSpawn, uv).r == 1)
-        _Result[id.xy] = float4(1,1,0,0);
+        _Result[id.xy] = float4(1, 1, 0, 0);
 }
 
 [numthreads(8,8,1)]
@@ -92,11 +66,13 @@ void ClearGreenChannel(uint3 id : SV_DispatchThreadID)
 {
     float4 uv = GetUV(id);
     float4 state = tex2Dlod(_GridBuffer, uv);
-    _Result[id.xy] = float4(state.x, 0, 0, 0);
+    _Result[id.xy] = float4(state.x, 0, state.zw);
 }
 
 [numthreads(8,8,1)]
 void ApplyBuffer(uint3 id : SV_DispatchThreadID)
 {
-    ApplyBuffer(id.xy);
+    float4 pos = float4(id.xy / _Resolution, 0, 0);
+    float4 buffer = tex2Dlod(_GridBuffer, pos);
+    _Result[id.xy] = buffer;
 }
