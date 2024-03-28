@@ -13,22 +13,10 @@ namespace SandSimulation
         private SandSimulation _simulation;
 
         private bool _spawning;
-        
-        private void OnMouseUp()
-        {
-            this._spawning = false;
-        }
+        private float _spawningTimer;
 
-        private void OnMouseDown()
+        private void SpawnSand()
         {
-            this._spawning = true;
-        }
-
-        private void Update()
-        {
-            if (!this._spawning)
-                return;
-            
             Vector2 mouseWorldPosition = this._camera.ScreenToWorldPoint(Input.mousePosition);
             Vector2 lowerLeft = (Vector2)this._collider.transform.position - (this._collider.size * 0.5f);
             Vector2 upperRight = (Vector2)this._collider.transform.position + (this._collider.size * 0.5f);
@@ -37,6 +25,28 @@ namespace SandSimulation
                 Mathf.InverseLerp(lowerLeft.y, upperRight.y, mouseWorldPosition.y));
             
             this._simulation.SpawnSand(clickUV);
+        }
+        
+        private void OnMouseUp()
+        {
+            this._spawning = false;
+            this._spawningTimer = 0f;
+        }
+
+        private void OnMouseDown()
+        {
+            this._spawning = true;
+            this.SpawnSand();
+        }
+
+        private void Update()
+        {
+            if (!this._spawning)
+                return;
+
+            this._spawningTimer += Time.deltaTime;
+            if (this._spawningTimer > 0.2f)
+                this.SpawnSand();
         }
     }
 }
