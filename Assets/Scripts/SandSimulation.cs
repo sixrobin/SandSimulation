@@ -21,7 +21,9 @@ namespace SandSimulation
         private float _iterationDelay = 0.1f;
         [SerializeField]
         private Renderer _renderer;
-        
+        [SerializeField]
+        private int _spawnRadius = 10;
+
         private int _initKernelIndex;
         private int _nextKernelIndex;
         private int _clearGreenChannelKernelIndex;
@@ -115,7 +117,20 @@ namespace SandSimulation
         public void SpawnSand(Vector2 uv)
         {
             // TODO: Move this to a compute shader kernel (with the ability to use a brush/radius).
-            this._sandToSpawn.SetPixel(Mathf.FloorToInt(uv.x * this._resolution), Mathf.FloorToInt(uv.y * this._resolution), Color.white);
+            
+            for (int x = -this._spawnRadius / 2; x <= this._spawnRadius / 2; ++x)
+            {
+                for (int y = -this._spawnRadius / 2; y <= this._spawnRadius / 2; ++y)
+                {
+                    if (new Vector2Int(x, y).magnitude > (this._spawnRadius - 1f) / 2)
+                        continue;
+                    
+                    int px = Mathf.FloorToInt((uv.x + x * (1f / this._resolution)) * this._resolution);
+                    int py = Mathf.FloorToInt((uv.y + y * (1f / this._resolution)) * this._resolution);
+                    this._sandToSpawn.SetPixel(px, py, Color.white);
+                }   
+            }
+            
             this._sandToSpawn.Apply();
         }
         
