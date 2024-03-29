@@ -49,6 +49,7 @@ void Next(uint3 id : SV_DispatchThreadID)
             float4 downLeftState = SampleNeighbour(uv, -delta, -delta);
 
             // TODO: Factorize code inside if/else block.
+            // TODO: Sand can currently cross two rock tiles by going diagonally.
             if (random(id.xy) > 0.5)
             {
                 if (downRightState.r == 0 && downRightState.g == 0)

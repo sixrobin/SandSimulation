@@ -395,7 +395,7 @@ MonoBehaviour:
   _resolution: 128
   _iterationDelay: 0.002
   _renderer: {fileID: 464122502}
-  _spawnRadius: 8
+  _spawnRadius: 4
 --- !u!23 &464122502
 MeshRenderer:
   m_ObjectHideFlags: 0

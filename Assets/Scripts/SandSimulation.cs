@@ -36,11 +36,9 @@ namespace SandSimulation
         protected RenderTexture _gridBuffer;
         protected Texture2D _sandToSpawn;
 
-        public void ResetSimulation()
-        {
-            this.Init();
-        }
-        
+        public void ResetSimulation() => this.Init();
+        // TODO: ResetSand method.
+
         private RenderTexture CreateTexture()
         {
             RenderTexture texture = new(this._resolution, this._resolution, 0, RenderTextureFormat.ARGBFloat)
