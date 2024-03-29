@@ -11,9 +11,13 @@ namespace SandSimulation
         private BoxCollider2D _collider;
         [SerializeField]
         private SandSimulation _simulation;
+        [SerializeField]
+        private SpawnType _spawnType;
 
         private bool _spawning;
         private float _spawningTimer;
+
+        public void SetSpawnType(SpawnType spawnType) => this._spawnType = spawnType;
 
         private void SpawnSand()
         {
@@ -24,7 +28,7 @@ namespace SandSimulation
             Vector2 clickUV = new(Mathf.InverseLerp(lowerLeft.x, upperRight.x, mouseWorldPosition.x),
                 Mathf.InverseLerp(lowerLeft.y, upperRight.y, mouseWorldPosition.y));
             
-            this._simulation.SpawnSand(clickUV);
+            this._simulation.SpawnSand(this._spawnType, clickUV);
         }
         
         private void OnMouseUp()

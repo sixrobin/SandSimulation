@@ -77,9 +77,15 @@ void Next(uint3 id : SV_DispatchThreadID)
             }
         }
     }
-    
-    if (state.r == 0 && tex2Dlod(_SandToSpawn, uv).r == 1)
-        _Result[id.xy] = float4(1, 1, 0, 0);
+
+    float4 sandToSpawn = tex2Dlod(_SandToSpawn, uv);
+    if (sandToSpawn.r > 0)
+    {
+        if (sandToSpawn.r == 3) // Clear.
+            sandToSpawn.r = 0;
+        
+        _Result[id.xy] = float4(sandToSpawn.r, 1, 0, 0);
+    }
 }
 
 [numthreads(8,8,1)]

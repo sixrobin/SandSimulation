@@ -36,9 +36,14 @@ namespace SandSimulation
         protected RenderTexture _gridBuffer;
         protected Texture2D _sandToSpawn;
 
+        public void ResetSimulation()
+        {
+            this.Init();
+        }
+        
         private RenderTexture CreateTexture()
         {
-            RenderTexture texture = new(this._resolution, this._resolution, 0, RenderTextureFormat.ARGB32)
+            RenderTexture texture = new(this._resolution, this._resolution, 0, RenderTextureFormat.ARGBFloat)
             {
                 enableRandomWrite = true,
                 filterMode = FilterMode.Point,
@@ -51,7 +56,7 @@ namespace SandSimulation
         
         private Texture2D CreateTexture2D()
         {
-            Texture2D texture = new Texture2D(this._resolution, this._resolution, TextureFormat.RFloat, false)
+            Texture2D texture = new(this._resolution, this._resolution, TextureFormat.RGBAFloat, false)
             {
                 filterMode = FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp,
@@ -114,9 +119,11 @@ namespace SandSimulation
             this._computeShader.Dispatch(this._applyBufferKernelIndex, this._threadGroups, this._threadGroups, 1);
         }
 
-        public void SpawnSand(Vector2 uv)
+        public void SpawnSand(SpawnType type, Vector2 uv)
         {
             // TODO: Move this to a compute shader kernel (with the ability to use a brush/radius).
+
+            Color pixelColor = new(type.ID, 1f, 1f, 1f);
             
             for (int x = -this._spawnRadius / 2; x <= this._spawnRadius / 2; ++x)
             {
@@ -127,7 +134,7 @@ namespace SandSimulation
                     
                     int px = Mathf.FloorToInt((uv.x + x * (1f / this._resolution)) * this._resolution);
                     int py = Mathf.FloorToInt((uv.y + y * (1f / this._resolution)) * this._resolution);
-                    this._sandToSpawn.SetPixel(px, py, Color.white);
+                    this._sandToSpawn.SetPixel(px, py, pixelColor);
                 }   
             }
             
