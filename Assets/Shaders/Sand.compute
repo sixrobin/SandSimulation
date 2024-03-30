@@ -20,6 +20,23 @@ float4 SampleNeighbour(float4 position, float dx, float dy)
     return tex2Dlod(_GridBuffer, position + float4(dx, dy, 0, 0));
 }
 
+void MoveDown(uint3 id)
+{
+    _Result[id.xy] = float4(0, 1, 0, 0);
+    _Result[id.xy - uint2(0, 1)] = float4(1, 1, 0, 0);
+}
+
+void MoveDownLeft(uint3 id)
+{
+    _Result[id.xy] = float4(0, 1, 0, 0);
+    _Result[id.xy - uint2(1, 1)] = float4(1, 1, 0, 0);
+}
+
+void MoveDownRight(uint3 id)
+{
+    _Result[id.xy] = float4(0, 1, 0, 0);
+    _Result[id.xy - uint2(-1, 1)] = float4(1, 1, 0, 0);
+}
 [numthreads(8,8,1)]
 void Init(uint3 id : SV_DispatchThreadID)
 {
@@ -40,41 +57,29 @@ void Next(uint3 id : SV_DispatchThreadID)
 
         if (downState.r == 0 && downState.g == 0)
         {
-            _Result[id.xy] = float4(0, 1, 0, 0);
-            _Result[id.xy - uint2(0, 1)] = float4(1, 1, 0, 0);
+            MoveDown(id);
         }
         else
         {
             float4 downRightState = SampleNeighbour(uv, delta, -delta);
             float4 downLeftState = SampleNeighbour(uv, -delta, -delta);
+            float4 rightState = SampleNeighbour(uv, delta, 0);
+            float4 leftState = SampleNeighbour(uv, -delta, 0);
 
-            // TODO: Factorize code inside if/else block.
             // TODO: Sand can currently cross two rock tiles by going diagonally.
             if (random(id.xy) > 0.5)
             {
-                if (downRightState.r == 0 && downRightState.g == 0)
-                {
-                    _Result[id.xy] = float4(0, 1, 0, 0);
-                    _Result[id.xy - uint2(-1, 1)] = float4(1, 1, 0, 0);
-                }
-                else if (downLeftState.r == 0 && downLeftState.g == 0)
-                {
-                    _Result[id.xy] = float4(0, 1, 0, 0);
-                    _Result[id.xy - uint2(1, 1)] = float4(1, 1, 0, 0);
-                }
+                if (downRightState.r == 0 && rightState.r == 0)
+                    MoveDownRight(id);
+                else if (downLeftState.r == 0 && leftState.r == 0)
+                    MoveDownLeft(id);
             }
             else
             {
-                if (downLeftState.r == 0 && downLeftState.g == 0)
-                {
-                    _Result[id.xy] = float4(0, 1, 0, 0);
-                    _Result[id.xy - uint2(1, 1)] = float4(1, 1, 0, 0);
-                }
-                else if (downRightState.r == 0 && downRightState.g == 0)
-                {
-                    _Result[id.xy] = float4(0, 1, 0, 0);
-                    _Result[id.xy - uint2(-1, 1)] = float4(1, 1, 0, 0);
-                }
+                if (downLeftState.r == 0 && leftState.r == 0)
+                    MoveDownLeft(id);
+                else if (downRightState.r == 0 && rightState.r == 0)
+                    MoveDownRight(id);
             }
         }
     }
