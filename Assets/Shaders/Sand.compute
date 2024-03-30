@@ -25,18 +25,17 @@ void MoveDown(uint3 id)
     _Result[id.xy] = float4(0, 1, 0, 0);
     _Result[id.xy - uint2(0, 1)] = float4(1, 1, 0, 0);
 }
-
 void MoveDownLeft(uint3 id)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
     _Result[id.xy - uint2(1, 1)] = float4(1, 1, 0, 0);
 }
-
 void MoveDownRight(uint3 id)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
     _Result[id.xy - uint2(-1, 1)] = float4(1, 1, 0, 0);
 }
+
 [numthreads(8,8,1)]
 void Init(uint3 id : SV_DispatchThreadID)
 {
@@ -66,7 +65,6 @@ void Next(uint3 id : SV_DispatchThreadID)
             float4 rightState = SampleNeighbour(uv, delta, 0);
             float4 leftState = SampleNeighbour(uv, -delta, 0);
 
-            // TODO: Sand can currently cross two rock tiles by going diagonally.
             if (random(id.xy) > 0.5)
             {
                 if (downRightState.r == 0 && rightState.r == 0)
