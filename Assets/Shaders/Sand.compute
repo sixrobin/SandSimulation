@@ -4,6 +4,8 @@
 #pragma kernel ApplyBuffer
 
 #include "Random.cginc"
+#define INIT_GRAVITY_MAX 10.0
+#define COLLISION_GRAVITY 3.0
 
 float _Resolution;
 RWTexture2D<float4> _Result;
@@ -20,20 +22,20 @@ float4 SampleNeighbour(float4 position, float dx, float dy)
     return tex2Dlod(_GridBuffer, position + float4(dx, dy, 0, 0));
 }
 
-void MoveDown(uint3 id)
+void MoveDown(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(0, 1)] = float4(1, 1, 0, 0);
+    _Result[id.xy - uint2(0, state.b)] = float4(1, 1, state.b, 0);
 }
-void MoveDownLeft(uint3 id)
+void MoveDownLeft(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(1, 1)] = float4(1, 1, 0, 0);
+    _Result[id.xy - uint2(1, 1)] = float4(1, 1, COLLISION_GRAVITY, 0);
 }
-void MoveDownRight(uint3 id)
+void MoveDownRight(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(-1, 1)] = float4(1, 1, 0, 0);
+    _Result[id.xy - uint2(-1, 1)] = float4(1, 1, COLLISION_GRAVITY, 0);
 }
 
 [numthreads(8,8,1)]
@@ -50,13 +52,32 @@ void Next(uint3 id : SV_DispatchThreadID)
     
     float4 state = tex2Dlod(_GridBuffer, uv);
 
-    if (uv.y > 0 && state.r == 1)
+    if (uv.y == 0)
     {
-        float4 downState = SampleNeighbour(uv, 0, -delta);
+        _Result[id.xy] = float4(state.rg, 0, state.a); // Nullify gravity.
+        return;
+    }
 
-        if (downState.r == 0 && downState.g == 0)
+    state.b += 1; // Increase gravity.
+    
+    if (state.r == 1)
+    {
+        int downObstacleDistance = 0;
+        for (int i = 1; i <= state.b; ++i)
         {
-            MoveDown(id);
+            if (SampleNeighbour(uv, 0, -delta * i).r != 0) // Obstacle below.
+                break;
+
+            downObstacleDistance++;
+
+            if (uv.y - delta * i == 0) // Bottom reached.
+                break;
+        }
+
+        if (downObstacleDistance > 0)
+        {
+            state.b = min(downObstacleDistance, state.b);
+            MoveDown(id, state);
         }
         else
         {
@@ -68,16 +89,16 @@ void Next(uint3 id : SV_DispatchThreadID)
             if (random(id.xy) > 0.5)
             {
                 if (downRightState.r == 0 && rightState.r == 0)
-                    MoveDownRight(id);
+                    MoveDownRight(id, state);
                 else if (downLeftState.r == 0 && leftState.r == 0)
-                    MoveDownLeft(id);
+                    MoveDownLeft(id, state);
             }
             else
             {
                 if (downLeftState.r == 0 && leftState.r == 0)
-                    MoveDownLeft(id);
+                    MoveDownLeft(id, state);
                 else if (downRightState.r == 0 && rightState.r == 0)
-                    MoveDownRight(id);
+                    MoveDownRight(id, state);
             }
         }
     }
@@ -88,7 +109,7 @@ void Next(uint3 id : SV_DispatchThreadID)
         if (sandToSpawn.r == 3) // Clear.
             sandToSpawn.r = 0;
         
-        _Result[id.xy] = float4(sandToSpawn.r, 1, 0, 0);
+        _Result[id.xy] = float4(sandToSpawn.r, 1, floor(random(id.xy) * INIT_GRAVITY_MAX), 0);
     }
 }
 
