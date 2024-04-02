@@ -5,7 +5,7 @@
 
 #include "Random.cginc"
 #define INIT_GRAVITY_MAX 10.0
-#define COLLISION_GRAVITY 3.0
+#define COLLISION_GRAVITY_MAX 5.0
 
 float _Resolution;
 RWTexture2D<float4> _Result;
@@ -35,12 +35,12 @@ void MoveDown(uint3 id, float4 state)
 void MoveDownLeft(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(1, 1)] = float4(1, 1, COLLISION_GRAVITY, 0);
+    _Result[id.xy - uint2(1, 1)] = float4(1, 1, floor(random(id.xy) * COLLISION_GRAVITY_MAX), 0);
 }
 void MoveDownRight(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(-1, 1)] = float4(1, 1, COLLISION_GRAVITY, 0);
+    _Result[id.xy - uint2(-1, 1)] = float4(1, 1, floor(random(id.xy) * COLLISION_GRAVITY_MAX), 0);
 }
 
 [numthreads(8,8,1)]
@@ -108,7 +108,9 @@ void Next(uint3 id : SV_DispatchThreadID)
         }
     }
 
-    if (_SpawnData.w > -1 && Distance(uv.xy, _SpawnData.xy) < (_SpawnData.z / _Resolution))
+    if (_SpawnData.w > -1
+        && (_SpawnData.w != 1 || random(uv.xy) < 0.5)
+        && Distance(uv.xy, _SpawnData.xy) < (_SpawnData.z / 2) / _Resolution)
     {
         float spawnType = _SpawnData.w;
         if (spawnType == 3)
@@ -116,15 +118,6 @@ void Next(uint3 id : SV_DispatchThreadID)
         
         _Result[id.xy] = float4(spawnType, 1, floor(random(id.xy) * INIT_GRAVITY_MAX), 0);
     }
-        
-    // float4 sandToSpawn = tex2Dlod(_SandToSpawn, uv);
-    // if (sandToSpawn.r > 0)
-    // {
-    //     if (sandToSpawn.r == 3) // Clear.
-    //         sandToSpawn.r = 0;
-    //     
-    //     _Result[id.xy] = float4(sandToSpawn.r, 1, floor(random(id.xy) * INIT_GRAVITY_MAX), 0);
-    // }
 }
 
 [numthreads(8,8,1)]

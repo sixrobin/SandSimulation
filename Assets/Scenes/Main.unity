@@ -393,10 +393,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _computeShader: {fileID: 7200000, guid: 52c5c6b3448079446b988166d1586c93, type: 3}
   _resolution: 1024
-  _iterationDelay: 0.02
-  _iterationsPerTick: 1
+  _iterationDelay: 0.025
+  _iterationsPerTick: 6
   _renderer: {fileID: 464122502}
-  _spawnRadius: 8
+  _spawnRadius: 32
 --- !u!23 &464122502
 MeshRenderer:
   m_ObjectHideFlags: 0
