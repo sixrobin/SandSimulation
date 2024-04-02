@@ -10,6 +10,7 @@ namespace SandSimulation
         private const string KERNEL_NAME_APPLY_BUFFER = "ApplyBuffer";
         
         private const string RESOLUTION_ID = "_Resolution";
+        private const string ITERATIONS_ID = "_Iterations";
         private const string RESULT_ID = "_Result";
         private const string GRID_BUFFER_ID = "_GridBuffer";
         
@@ -33,6 +34,7 @@ namespace SandSimulation
         
         private float _iterationTimer;
         private int _threadGroups;
+        private int _iterations;
         
         protected RenderTexture _result;
         protected RenderTexture _gridBuffer;
@@ -95,9 +97,11 @@ namespace SandSimulation
 
         private void Next()
         {
+            this._computeShader.SetInt("_Iterations", this._iterations);
+            
             if (this._nextSpawnType != null)
                 this._computeShader.SetVector("_SpawnData", new Vector4(this._nextSpawnUV.x, this._nextSpawnUV.y, this._spawnRadius, this._nextSpawnType.ID));
-
+            
             this._computeShader.SetTexture(this._nextKernelIndex, RESULT_ID, this._result);
             this._computeShader.SetTexture(this._nextKernelIndex, GRID_BUFFER_ID, this._gridBuffer);
             this._computeShader.Dispatch(this._nextKernelIndex, this._threadGroups, this._threadGroups, 1);
@@ -139,7 +143,10 @@ namespace SandSimulation
             if (this._iterationTimer > this._iterationDelay)
             {
                 for (int i = 0; i < this._iterationsPerTick; ++i)
+                {
                     this.Next();
+                    this._iterations++;
+                }
     
                 this._iterationTimer = 0f;
             }

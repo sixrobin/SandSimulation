@@ -8,6 +8,7 @@
 #define COLLISION_GRAVITY_MAX 5.0
 
 float _Resolution;
+uint _Iterations;
 RWTexture2D<float4> _Result;
 sampler2D _GridBuffer;
 float4 _SpawnData; // XY = Position, Z = Radius, W = Type.
@@ -46,6 +47,7 @@ void MoveDownRight(uint3 id, float4 state)
 [numthreads(8,8,1)]
 void Init(uint3 id : SV_DispatchThreadID)
 {
+    // TODO: Init a rock cavern pattern using cellular automaton.
     _Result[id.xy] = 0;
 }
 
@@ -79,7 +81,7 @@ void Next(uint3 id : SV_DispatchThreadID)
                 break;
         }
 
-        if (downObstacleDistance == 1)
+        if (downObstacleDistance == 1) // TODO: Makes movement more organic, but loses gravity.
         {
             state.b = min(downObstacleDistance, state.b);
             MoveDown(id, state);
@@ -91,7 +93,7 @@ void Next(uint3 id : SV_DispatchThreadID)
             float4 rightState = SampleNeighbour(uv, delta, 0);
             float4 leftState = SampleNeighbour(uv, -delta, 0);
 
-            if (random(id.xy) > 0.5) // TODO: Make this more random over iterations.
+            if (hash21(id.xy * (_Iterations % 1000)) > 0.5)
             {
                 if (downRightState.r == 0 && rightState.r == 0)
                     MoveDownRight(id, state);
