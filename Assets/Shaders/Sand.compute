@@ -79,7 +79,7 @@ void Next(uint3 id : SV_DispatchThreadID)
                 break;
         }
 
-        if (downObstacleDistance > 0)
+        if (downObstacleDistance == 1)
         {
             state.b = min(downObstacleDistance, state.b);
             MoveDown(id, state);
@@ -91,7 +91,7 @@ void Next(uint3 id : SV_DispatchThreadID)
             float4 rightState = SampleNeighbour(uv, delta, 0);
             float4 leftState = SampleNeighbour(uv, -delta, 0);
 
-            if (random(id.xy) > 0.5)
+            if (random(id.xy) > 0.5) // TODO: Make this more random over iterations.
             {
                 if (downRightState.r == 0 && rightState.r == 0)
                     MoveDownRight(id, state);
