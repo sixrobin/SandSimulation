@@ -10,7 +10,7 @@
 float _Resolution;
 RWTexture2D<float4> _Result;
 sampler2D _GridBuffer;
-sampler2D _SandToSpawn;
+float4 _SpawnData; // XY = Position, Z = Radius, W = Type.
 
 float4 GetUV(uint3 id)
 {
@@ -20,6 +20,11 @@ float4 GetUV(uint3 id)
 float4 SampleNeighbour(float4 position, float dx, float dy)
 {
     return tex2Dlod(_GridBuffer, position + float4(dx, dy, 0, 0));
+}
+
+float Distance(float2 a, float2 b)
+{
+    return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
 }
 
 void MoveDown(uint3 id, float4 state)
@@ -103,14 +108,23 @@ void Next(uint3 id : SV_DispatchThreadID)
         }
     }
 
-    float4 sandToSpawn = tex2Dlod(_SandToSpawn, uv);
-    if (sandToSpawn.r > 0)
+    if (_SpawnData.w > -1 && Distance(uv.xy, _SpawnData.xy) < (_SpawnData.z / _Resolution))
     {
-        if (sandToSpawn.r == 3) // Clear.
-            sandToSpawn.r = 0;
+        float spawnType = _SpawnData.w;
+        if (spawnType == 3)
+            spawnType = 0;
         
-        _Result[id.xy] = float4(sandToSpawn.r, 1, floor(random(id.xy) * INIT_GRAVITY_MAX), 0);
+        _Result[id.xy] = float4(spawnType, 1, floor(random(id.xy) * INIT_GRAVITY_MAX), 0);
     }
+        
+    // float4 sandToSpawn = tex2Dlod(_SandToSpawn, uv);
+    // if (sandToSpawn.r > 0)
+    // {
+    //     if (sandToSpawn.r == 3) // Clear.
+    //         sandToSpawn.r = 0;
+    //     
+    //     _Result[id.xy] = float4(sandToSpawn.r, 1, floor(random(id.xy) * INIT_GRAVITY_MAX), 0);
+    // }
 }
 
 [numthreads(8,8,1)]

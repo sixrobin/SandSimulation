@@ -15,13 +15,15 @@ namespace SandSimulation
         
         [SerializeField]
         private ComputeShader _computeShader;
-        [SerializeField]
+        [SerializeField, Min(8)]
         private int _resolution = 256;
-        [SerializeField]
+        [SerializeField, Min(0f)]
         private float _iterationDelay = 0.1f;
+        [SerializeField, Min(1)]
+        private int _iterationsPerTick = 1;
         [SerializeField]
         private Renderer _renderer;
-        [SerializeField]
+        [SerializeField, Min(1f)]
         private int _spawnRadius = 10;
 
         private int _initKernelIndex;
@@ -34,7 +36,9 @@ namespace SandSimulation
         
         protected RenderTexture _result;
         protected RenderTexture _gridBuffer;
-        protected Texture2D _sandToSpawn;
+
+        private SpawnType _nextSpawnType;
+        private Vector2 _nextSpawnUV;
 
         public void ResetSimulation() => this.Init();
         // TODO: ResetSand method.
@@ -78,7 +82,6 @@ namespace SandSimulation
             
             this._result = this.CreateTexture();
             this._gridBuffer = this.CreateTexture();
-            this._sandToSpawn = this.CreateTexture2D();
             this._renderer.material.SetTexture("_MainTex", this._result);
             
             this._computeShader.SetTexture(this._initKernelIndex, RESULT_ID, this._gridBuffer);
@@ -92,22 +95,23 @@ namespace SandSimulation
 
         private void Next()
         {
+            if (this._nextSpawnType != null)
+                this._computeShader.SetVector("_SpawnData", new Vector4(this._nextSpawnUV.x, this._nextSpawnUV.y, this._spawnRadius, this._nextSpawnType.ID));
+
             this._computeShader.SetTexture(this._nextKernelIndex, RESULT_ID, this._result);
             this._computeShader.SetTexture(this._nextKernelIndex, GRID_BUFFER_ID, this._gridBuffer);
-            this._computeShader.SetTexture(this._nextKernelIndex, "_SandToSpawn", this._sandToSpawn);
             this._computeShader.Dispatch(this._nextKernelIndex, this._threadGroups, this._threadGroups, 1);
 
             this.ApplyTextureBuffer();
             
             this._computeShader.SetTexture(this._clearGreenChannelKernelIndex, RESULT_ID, this._result);
             this._computeShader.SetTexture(this._clearGreenChannelKernelIndex, GRID_BUFFER_ID, this._gridBuffer);
-            this._computeShader.SetTexture(this._clearGreenChannelKernelIndex, "_SandToSpawn", this._sandToSpawn);
             this._computeShader.Dispatch(this._clearGreenChannelKernelIndex, this._threadGroups, this._threadGroups, 1);
             
             this.ApplyTextureBuffer();
-
-            // TODO: Do not recreate it each time, clear instead.
-            this._sandToSpawn = this.CreateTexture2D();
+            
+            this._computeShader.SetVector("_SpawnData", new Vector4(-1f, -1f, -1f, -1f));
+            this._nextSpawnType = null;
         }
         
         private void ApplyTextureBuffer()
@@ -119,24 +123,8 @@ namespace SandSimulation
 
         public void SpawnSand(SpawnType type, Vector2 uv)
         {
-            // TODO: Move this to a compute shader kernel (with the ability to use a brush/radius).
-
-            Color pixelColor = new(type.ID, 1f, 1f, 1f);
-            
-            for (int x = -this._spawnRadius / 2; x <= this._spawnRadius / 2; ++x)
-            {
-                for (int y = -this._spawnRadius / 2; y <= this._spawnRadius / 2; ++y)
-                {
-                    if (new Vector2Int(x, y).magnitude > (this._spawnRadius - 1f) / 2)
-                        continue;
-                    
-                    int px = Mathf.FloorToInt((uv.x + x * (1f / this._resolution)) * this._resolution);
-                    int py = Mathf.FloorToInt((uv.y + y * (1f / this._resolution)) * this._resolution);
-                    this._sandToSpawn.SetPixel(px, py, pixelColor);
-                }   
-            }
-            
-            this._sandToSpawn.Apply();
+            this._nextSpawnType = type;
+            this._nextSpawnUV = uv;
         }
         
         #region UNITY METHODS
@@ -150,7 +138,9 @@ namespace SandSimulation
             this._iterationTimer += Time.deltaTime;
             if (this._iterationTimer > this._iterationDelay)
             {
-                this.Next();
+                for (int i = 0; i < this._iterationsPerTick; ++i)
+                    this.Next();
+    
                 this._iterationTimer = 0f;
             }
         }
