@@ -392,8 +392,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _computeShader: {fileID: 7200000, guid: 52c5c6b3448079446b988166d1586c93, type: 3}
-  _resolution: 1024
-  _iterationDelay: 0.02
+  _resolution: 2048
+  _iterationDelay: 0
   _iterationsPerTick: 10
   _renderer: {fileID: 464122502}
   _spawnRadius: 48
