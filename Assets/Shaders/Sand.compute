@@ -4,8 +4,6 @@
 #pragma kernel ApplyBuffer
 
 #include "Random.cginc"
-#define INIT_GRAVITY_MAX 10.0
-#define COLLISION_GRAVITY_MAX 5.0
 
 float _Resolution;
 uint _Iterations;
@@ -31,17 +29,27 @@ float Distance(float2 a, float2 b)
 void MoveDown(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(0, state.b)] = float4(1, 1, state.b, 0);
+    _Result[id.xy - uint2(0, 1)] = float4(state.x, 1, 0, 0);
 }
 void MoveDownLeft(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(1, 1)] = float4(1, 1, floor(random(id.xy) * COLLISION_GRAVITY_MAX), 0);
+    _Result[id.xy - uint2(1, 1)] = float4(state.x, 1, 0, 0);
 }
 void MoveDownRight(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(-1, 1)] = float4(1, 1, floor(random(id.xy) * COLLISION_GRAVITY_MAX), 0);
+    _Result[id.xy - uint2(-1, 1)] = float4(state.x, 1, 0, 0);
+}
+void MoveLeft(uint3 id, float4 state)
+{
+    _Result[id.xy] = float4(0, 1, 0, 0);
+    _Result[id.xy - uint2(1, 0)] = float4(state.x, 1, 0, 0);
+}
+void MoveRight(uint3 id, float4 state)
+{
+    _Result[id.xy] = float4(0, 1, 0, 0);
+    _Result[id.xy - uint2(-1, 0)] = float4(state.x, 1, 0, 0);
 }
 
 [numthreads(8,8,1)]
@@ -59,67 +67,83 @@ void Next(uint3 id : SV_DispatchThreadID)
     
     float4 state = tex2Dlod(_GridBuffer, uv);
 
-    if (uv.y == 0)
-    {
-        _Result[id.xy] = float4(state.rg, 0, state.a); // Nullify gravity.
-        return;
-    }
-
-    state.b += 1; // Increase gravity.
+    // Neighbours state.
+    float4 downState = SampleNeighbour(uv, 0, -delta);
+    float4 downRightState = SampleNeighbour(uv, delta, -delta);
+    float4 downLeftState = SampleNeighbour(uv, -delta, -delta);
+    float4 rightState = SampleNeighbour(uv, delta, 0);
+    float4 leftState = SampleNeighbour(uv, -delta, 0);
     
-    if (state.r == 1)
+    if (state.x == 1)
     {
-        int downObstacleDistance = 0;
-        for (int i = 1; i <= state.b; ++i)
+        if (uv.y > 0)
         {
-            if (SampleNeighbour(uv, 0, -delta * i).r != 0) // Obstacle below.
-                break;
-
-            downObstacleDistance++;
-
-            if (uv.y - delta * i == 0) // Bottom reached.
-                break;
+            if (downState.x == 0)
+            {
+                MoveDown(id, state);
+            }
+            else
+            {
+                if (hash21(id.xy) > 0.5)
+                {
+                    if (downRightState.x == 0 && rightState.x == 0)
+                        MoveDownRight(id, state);
+                    else if (downLeftState.x == 0 && leftState.x == 0)
+                        MoveDownLeft(id, state);
+                }
+                else
+                {
+                    if (downLeftState.x == 0 && leftState.x == 0)
+                        MoveDownLeft(id, state);
+                    else if (downRightState.x == 0 && rightState.x == 0)
+                        MoveDownRight(id, state);
+                }
+            }
         }
-
-        if (downObstacleDistance == 1) // TODO: Makes movement more organic, but loses gravity.
+    }
+    else if (state.x == 3)
+    {
+        if (uv.y > 0 && downState.x == 0)
         {
-            state.b = min(downObstacleDistance, state.b);
             MoveDown(id, state);
         }
         else
         {
-            float4 downRightState = SampleNeighbour(uv, delta, -delta);
-            float4 downLeftState = SampleNeighbour(uv, -delta, -delta);
-            float4 rightState = SampleNeighbour(uv, delta, 0);
-            float4 leftState = SampleNeighbour(uv, -delta, 0);
-
-            if (hash21(id.xy * (_Iterations % 1000)) > 0.5)
+            // TODO: Randomize water horizontal direction and flip it on collision.
+            
+            if (hash21(id.xy) > 0.5)
             {
-                if (downRightState.r == 0 && rightState.r == 0)
+                if (uv.y > 0 && downRightState.x == 0 && rightState.x == 0)
                     MoveDownRight(id, state);
-                else if (downLeftState.r == 0 && leftState.r == 0)
+                else if (uv.y > 0 && downLeftState.x == 0 && leftState.x == 0)
                     MoveDownLeft(id, state);
+                else if (uv.x > 0 && uv.x < 1)
+                {
+                    if (uv.x < 1 && rightState.x == 0)
+                        MoveRight(id, state);
+                    // else if (uv.x > 0 && uv.x < 1 && leftState.x == 0)
+                    //     MoveLeft(id, state);
+                }
             }
             else
             {
-                if (downLeftState.r == 0 && leftState.r == 0)
+                if (uv.y > 0 && downLeftState.x == 0 && leftState.x == 0)
                     MoveDownLeft(id, state);
-                else if (downRightState.r == 0 && rightState.r == 0)
+                else if (uv.y > 0 && downRightState.x == 0 && rightState.x == 0)
                     MoveDownRight(id, state);
+                else if (uv.x > 0 && uv.x < 1)
+                {
+                    if (uv.x < 1 && rightState.x == 0)
+                        MoveRight(id, state);
+                    // else if (uv.x > 0 && uv.x < 1 && leftState.x == 0)
+                    //     MoveLeft(id, state);
+                }
             }
         }
     }
-
-    if (_SpawnData.w > -1
-        && (_SpawnData.w != 1 || random(uv.xy) < 0.5)
-        && Distance(uv.xy, _SpawnData.xy) < (_SpawnData.z / 2) / _Resolution)
-    {
-        float spawnType = _SpawnData.w;
-        if (spawnType == 3)
-            spawnType = 0;
-        
-        _Result[id.xy] = float4(spawnType, 1, floor(random(id.xy) * INIT_GRAVITY_MAX), 0);
-    }
+    
+    if (_SpawnData.w > -1 && Distance(uv.xy, _SpawnData.xy) < (_SpawnData.z / 2) / _Resolution)
+        _Result[id.xy] = float4(_SpawnData.w, 1, 0, 0);
 }
 
 [numthreads(8,8,1)]
