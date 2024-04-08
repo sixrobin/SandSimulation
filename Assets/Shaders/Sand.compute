@@ -116,7 +116,7 @@ void Next(uint3 id : SV_DispatchThreadID)
     float4 rightState = SampleNeighbour(uv, delta, 0);
     float4 leftState = SampleNeighbour(uv, -delta, 0);
     
-    if (state.x == 1) // Sand.
+    if (state.x == 1 || state.x == 2) // Sand/Snow.
     {
         if (uv.y > 0)
         {
@@ -130,10 +130,10 @@ void Next(uint3 id : SV_DispatchThreadID)
             }
             else
             {
-                bool downRightStateCanCross = downRightState.x == 0 || downRightState.x == 3;
-                bool rightStateCanCross = rightState.x == 0 || rightState.x == 3;
-                bool downLeftStateCanCross = downLeftState.x == 0 || downLeftState.x == 3;
-                bool leftStateCanCross = leftState.x == 0 || leftState.x == 3;
+                bool downRightStateCanCross = downRightState.w < state.w;
+                bool rightStateCanCross = rightState.w < state.w;
+                bool downLeftStateCanCross = downLeftState.w < state.w;
+                bool leftStateCanCross = leftState.w < state.w;
                 
                 if (hash21(id.xy) > 0.5) // Randomize diagonal fall direction.
                 {
@@ -152,7 +152,7 @@ void Next(uint3 id : SV_DispatchThreadID)
             }
         }
     }
-    else if (state.x == 3) // Water.
+    else if (state.x == 4) // Water.
     {
         if (uv.y > 0 && downState.x == 0)
         {

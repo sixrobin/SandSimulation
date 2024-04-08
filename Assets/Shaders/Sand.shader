@@ -4,6 +4,7 @@ Shader "Sand"
     {
         _BackgroundColor ("Background Color", Color) = (0, 0, 0.1, 1)
         _SandColor ("Sand Color", Color) = (1, 1, 0.25, 1)
+        _SnowColor ("Snow Color", Color) = (1, 1, 1, 1)
         _RockColor ("Rock Color", Color) = (0.2, 0.2, 0.2, 1)
         _WaterColor ("Water Color", Color) = (0, 0.5, 1, 1)
         [HideInInspector] _MainTex ("Texture", 2D) = "white" {}
@@ -42,6 +43,7 @@ Shader "Sand"
 
             float4 _BackgroundColor;
             float4 _SandColor;
+            float4 _SnowColor;
             float4 _RockColor;
             float4 _WaterColor;
             
@@ -55,13 +57,15 @@ Shader "Sand"
 
             fixed4 frag(v2f i) : SV_Target
             {
-                float4 sandData = tex2D(_MainTex, i.uv);
+                float data = tex2D(_MainTex, i.uv).x;
 
-                if (sandData.r == 1)
+                if (data == 1)
                     return _SandColor;
-                if (sandData.r == 2)
+                if (data == 2)
+                    return _SnowColor;
+                if (data == 3)
                     return _RockColor;
-                if (sandData.r == 3)
+                if (data == 4)
                     return _WaterColor;
 
                 return _BackgroundColor;
