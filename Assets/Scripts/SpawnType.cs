@@ -7,5 +7,8 @@ namespace SandSimulation
     {
         [field: SerializeField]
         public int ID { get; private set; }
+        
+        [field: SerializeField]
+        public int Weight { get; private set; }
     }
 }

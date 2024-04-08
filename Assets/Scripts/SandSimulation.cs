@@ -98,9 +98,10 @@ namespace SandSimulation
         private void Next()
         {
             this._computeShader.SetInt("_Iterations", this._iterations);
+            this._computeShader.SetInt("_SpawnRadius", this._spawnRadius);
             
             if (this._nextSpawnType != null)
-                this._computeShader.SetVector("_SpawnData", new Vector4(this._nextSpawnUV.x, this._nextSpawnUV.y, this._spawnRadius, this._nextSpawnType.ID));
+                this._computeShader.SetVector("_SpawnData", new Vector4(this._nextSpawnUV.x, this._nextSpawnUV.y, this._nextSpawnType.Weight, this._nextSpawnType.ID));
             
             this._computeShader.SetTexture(this._nextKernelIndex, RESULT_ID, this._result);
             this._computeShader.SetTexture(this._nextKernelIndex, GRID_BUFFER_ID, this._gridBuffer);

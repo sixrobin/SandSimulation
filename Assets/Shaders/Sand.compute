@@ -9,7 +9,9 @@ float _Resolution;
 uint _Iterations;
 RWTexture2D<float4> _Result;
 sampler2D _GridBuffer;
-float4 _SpawnData; // XY = Position, Z = Radius, W = Type.
+
+float4 _SpawnData; // XY = Position, Z = Weight, W = Type.
+float _SpawnRadius;
 
 float4 GetUV(uint3 id)
 {
@@ -50,6 +52,12 @@ void MoveRight(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
     _Result[id.xy - uint2(-1, 0)] = float4(state.x, 1, 1, state.w);
+}
+
+void Swap(uint3 id, uint2 swapOffset, float4 state, float4 swapState)
+{
+    _Result[id.xy] = swapState;
+    _Result[id.xy + swapOffset] = state;
 }
 
 void WaterHorizontalMovement(uint3 id, float4 state, float4 uv, float rightState, float leftState)
@@ -116,20 +124,29 @@ void Next(uint3 id : SV_DispatchThreadID)
             {
                 MoveDown(id, state);
             }
+            else if (downState.w < state.w) // Element below is lighter.
+            {
+                Swap(id, uint2(0, -1), state, downState);
+            }
             else
             {
+                bool downRightStateCanCross = downRightState.x == 0 || downRightState.x == 3;
+                bool rightStateCanCross = rightState.x == 0 || rightState.x == 3;
+                bool downLeftStateCanCross = downLeftState.x == 0 || downLeftState.x == 3;
+                bool leftStateCanCross = leftState.x == 0 || leftState.x == 3;
+                
                 if (hash21(id.xy) > 0.5) // Randomize diagonal fall direction.
                 {
-                    if (downRightState.x == 0 && rightState.x == 0)
+                    if (downRightStateCanCross && rightStateCanCross)
                         MoveDownRight(id, state);
-                    else if (downLeftState.x == 0 && leftState.x == 0)
+                    else if (downLeftStateCanCross && leftStateCanCross)
                         MoveDownLeft(id, state);
                 }
                 else
                 {
-                    if (downLeftState.x == 0 && leftState.x == 0)
+                    if (downLeftStateCanCross && leftStateCanCross)
                         MoveDownLeft(id, state);
-                    else if (downRightState.x == 0 && rightState.x == 0)
+                    else if (downRightStateCanCross && rightStateCanCross)
                         MoveDownRight(id, state);
                 }
             }
@@ -165,8 +182,8 @@ void Next(uint3 id : SV_DispatchThreadID)
     }
     
     // TODO: If in distance but no spawn, then remove whatever was on the pixel?
-    if (_SpawnData.w > -1 && Distance(uv.xy, _SpawnData.xy) < (_SpawnData.z / 2) / _Resolution)
-        _Result[id.xy] = float4(_SpawnData.w, 1, 0, 0);
+    if (_SpawnData.w > -1 && Distance(uv.xy, _SpawnData.xy) < (_SpawnRadius / 2) / _Resolution)
+        _Result[id.xy] = float4(_SpawnData.w, 1, 0, _SpawnData.z);
 }
 
 [numthreads(8,8,1)]
