@@ -34,7 +34,6 @@ namespace SandSimulation
         
         private float _iterationTimer;
         private int _threadGroups;
-        private int _iterations;
         
         protected RenderTexture _result;
         protected RenderTexture _gridBuffer;
@@ -97,7 +96,6 @@ namespace SandSimulation
 
         private void Next()
         {
-            this._computeShader.SetInt("_Iterations", this._iterations);
             this._computeShader.SetInt("_SpawnRadius", this._spawnRadius);
             
             if (this._nextSpawnType != null)
@@ -144,10 +142,7 @@ namespace SandSimulation
             if (this._iterationTimer > this._iterationDelay)
             {
                 for (int i = 0; i < this._iterationsPerTick; ++i)
-                {
                     this.Next();
-                    this._iterations++;
-                }
     
                 this._iterationTimer = 0f;
             }

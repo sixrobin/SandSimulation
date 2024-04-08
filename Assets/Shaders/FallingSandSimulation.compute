@@ -6,27 +6,16 @@
 #include "Random.cginc"
 
 float _Resolution;
-uint _Iterations;
 RWTexture2D<float4> _Result;
 sampler2D _GridBuffer;
 
 float4 _SpawnData; // XY = Position, Z = Weight, W = Type.
 float _SpawnRadius;
 
-float4 GetUV(uint3 id)
-{
-    return float4(id.xy / _Resolution, 0, 0);
-}
-
-float4 SampleNeighbour(float4 position, float dx, float dy)
-{
-    return tex2Dlod(_GridBuffer, position + float4(dx, dy, 0, 0));
-}
-
-float Distance(float2 a, float2 b)
-{
-    return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
-}
+// Utils functions.
+float4 GetUV(uint3 id)                                      { return float4(id.xy / _Resolution, 0, 0); }
+float4 SampleNeighbour(float4 position, float dx, float dy) { return tex2Dlod(_GridBuffer, position + float4(dx, dy, 0, 0)); }
+float Distance(float2 a, float2 b)                          { return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)); }
 
 void MoveDown(uint3 id, float4 state)
 {
@@ -154,7 +143,7 @@ void Next(uint3 id : SV_DispatchThreadID)
     }
     else if (state.x == 4) // Water.
     {
-        if (uv.y > 0 && downState.x == 0)
+        if (uv.y > 0 && downState.w < state.w)
         {
             MoveDown(id, state);
         }
@@ -178,6 +167,42 @@ void Next(uint3 id : SV_DispatchThreadID)
                 else
                     WaterHorizontalMovement(id, state, uv, rightState.x, leftState.x);
             }
+        }
+    }
+    else if (state.x == 5) // Fire.
+    {
+        bool keepFalling = true;
+        
+        if (downState.x != 0 && downState.x != 5)
+        {
+            _Result[id.xy] = float4(0, 1, 0, 0);
+            keepFalling = false;
+
+            if (downState.x == 1 || downState.x == 2)
+                _Result[id.xy - uint2(0, 1)] = float4(state.x, 1, state.zw); // Propagate fire.
+        }
+        
+        if (rightState.x != 0 && rightState.x != 5)
+        {
+            _Result[id.xy] = float4(0, 1, 0, 0);
+            keepFalling = false;
+
+            if (rightState.x == 1 || rightState.x == 2)
+                _Result[id.xy - uint2(-1, 0)] = float4(state.x, 1, state.zw); // Propagate fire.
+        }
+        
+        if (leftState.x != 0 && leftState.x != 5)
+        {
+            _Result[id.xy] = float4(0, 1, 0, 0);
+            keepFalling = false;
+
+            if (leftState.x == 1 || leftState.x == 2)
+                _Result[id.xy - uint2(1, 0)] = float4(state.x, 1, state.zw); // Propagate fire.
+        }
+        
+        if (keepFalling)
+        {
+            MoveDown(id, state);
         }
     }
     
