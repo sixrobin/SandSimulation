@@ -29,27 +29,27 @@ float Distance(float2 a, float2 b)
 void MoveDown(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(0, 1)] = float4(state.x, 1, 0, 0);
+    _Result[id.xy - uint2(0, 1)] = float4(state.x, 1, state.zw);
 }
 void MoveDownLeft(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(1, 1)] = float4(state.x, 1, 0, 0);
+    _Result[id.xy - uint2(1, 1)] = float4(state.x, 1, state.zw);
 }
 void MoveDownRight(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(-1, 1)] = float4(state.x, 1, 0, 0);
+    _Result[id.xy - uint2(-1, 1)] = float4(state.x, 1, state.zw);
 }
 void MoveLeft(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(1, 0)] = float4(state.x, 1, 0, 0);
+    _Result[id.xy - uint2(1, 0)] = float4(state.x, 1, state.zw);
 }
 void MoveRight(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(-1, 0)] = float4(state.x, 1, 0, 0);
+    _Result[id.xy - uint2(-1, 0)] = float4(state.x, 1, state.zw);
 }
 
 [numthreads(8,8,1)]
@@ -74,7 +74,7 @@ void Next(uint3 id : SV_DispatchThreadID)
     float4 rightState = SampleNeighbour(uv, delta, 0);
     float4 leftState = SampleNeighbour(uv, -delta, 0);
     
-    if (state.x == 1)
+    if (state.x == 1) // Sand.
     {
         if (uv.y > 0)
         {
@@ -101,7 +101,7 @@ void Next(uint3 id : SV_DispatchThreadID)
             }
         }
     }
-    else if (state.x == 3)
+    else if (state.x == 3) // Water.
     {
         if (uv.y > 0 && downState.x == 0)
         {
@@ -114,29 +114,91 @@ void Next(uint3 id : SV_DispatchThreadID)
             if (hash21(id.xy) > 0.5)
             {
                 if (uv.y > 0 && downRightState.x == 0 && rightState.x == 0)
-                    MoveDownRight(id, state);
-                else if (uv.y > 0 && downLeftState.x == 0 && leftState.x == 0)
-                    MoveDownLeft(id, state);
-                else if (uv.x > 0 && uv.x < 1)
                 {
-                    if (uv.x < 1 && rightState.x == 0)
-                        MoveRight(id, state);
-                    // else if (uv.x > 0 && uv.x < 1 && leftState.x == 0)
-                    //     MoveLeft(id, state);
+                    state.z = 1;
+                    MoveDownRight(id, state);
+                }
+                else if (uv.y > 0 && downLeftState.x == 0 && leftState.x == 0)
+                {
+                    state.z = -1;
+                    MoveDownLeft(id, state);
+                }
+                else
+                {
+                    if (state.z == 0)
+                        state.z = 1;
+
+                    if (state.z == 1)
+                    {
+                        if (uv.x < 1 && rightState.x == 0)
+                        {
+                            if (_Result[id.xy + uint2(1, 0)].x == 0)
+                                MoveRight(id, state);
+                        }
+                        else
+                        {
+                            state.z = -1;
+                            _Result[id.xy] = state;
+                        }
+                    }
+                    else if (state.z == -1)
+                    {
+                        if (uv.x > 0 && leftState.x == 0)
+                        {
+                            if (_Result[id.xy - uint2(1, 0)].x == 0)
+                                MoveLeft(id, state);
+                        }
+                        else
+                        {
+                            state.z = 1;
+                            _Result[id.xy] = state;
+                        }
+                    }
                 }
             }
             else
             {
                 if (uv.y > 0 && downLeftState.x == 0 && leftState.x == 0)
-                    MoveDownLeft(id, state);
-                else if (uv.y > 0 && downRightState.x == 0 && rightState.x == 0)
-                    MoveDownRight(id, state);
-                else if (uv.x > 0 && uv.x < 1)
                 {
-                    if (uv.x < 1 && rightState.x == 0)
-                        MoveRight(id, state);
-                    // else if (uv.x > 0 && uv.x < 1 && leftState.x == 0)
-                    //     MoveLeft(id, state);
+                    state.z = -1;
+                    MoveDownLeft(id, state);
+                }
+                else if (uv.y > 0 && downRightState.x == 0 && rightState.x == 0)
+                {
+                    state.z = 1;
+                    MoveDownRight(id, state);
+                }
+                else
+                {
+                    if (state.z == 0)
+                        state.z = -1;
+
+                    if (state.z == 1)
+                    {
+                        if (uv.x < 1 && rightState.x == 0)
+                        {
+                            if (_Result[id.xy + uint2(1, 0)].x == 0)
+                                MoveRight(id, state);
+                        }
+                        else
+                        {
+                            state.z = -1;
+                            _Result[id.xy] = state;
+                        }
+                    }
+                    else if (state.z == -1)
+                    {
+                        if (uv.x > 0 && leftState.x == 0)
+                        {
+                            if (_Result[id.xy - uint2(1, 0)].x == 0)
+                                MoveLeft(id, state);
+                        }
+                        else
+                        {
+                            state.z = 1;
+                            _Result[id.xy] = state;
+                        }
+                    }
                 }
             }
         }
