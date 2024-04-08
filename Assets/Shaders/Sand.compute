@@ -101,6 +101,7 @@ void Next(uint3 id : SV_DispatchThreadID)
     float4 state = tex2Dlod(_GridBuffer, uv);
 
     // Neighbours state.
+    // TODO: Move these variables only in the branching that need them (done like this for now for implementation simplicity).
     float4 downState = SampleNeighbour(uv, 0, -delta);
     float4 downRightState = SampleNeighbour(uv, delta, -delta);
     float4 downLeftState = SampleNeighbour(uv, -delta, -delta);
@@ -163,6 +164,7 @@ void Next(uint3 id : SV_DispatchThreadID)
         }
     }
     
+    // TODO: If in distance but no spawn, then remove whatever was on the pixel?
     if (_SpawnData.w > -1 && Distance(uv.xy, _SpawnData.xy) < (_SpawnData.z / 2) / _Resolution)
         _Result[id.xy] = float4(_SpawnData.w, 1, 0, 0);
 }
