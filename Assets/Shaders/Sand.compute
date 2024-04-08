@@ -34,22 +34,55 @@ void MoveDown(uint3 id, float4 state)
 void MoveDownLeft(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(1, 1)] = float4(state.x, 1, state.zw);
+    _Result[id.xy - uint2(1, 1)] = float4(state.x, 1, -1, state.w);
 }
 void MoveDownRight(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(-1, 1)] = float4(state.x, 1, state.zw);
+    _Result[id.xy - uint2(-1, 1)] = float4(state.x, 1, 1, state.w);
 }
 void MoveLeft(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(1, 0)] = float4(state.x, 1, state.zw);
+    _Result[id.xy - uint2(1, 0)] = float4(state.x, 1, -1, state.w);
 }
 void MoveRight(uint3 id, float4 state)
 {
     _Result[id.xy] = float4(0, 1, 0, 0);
-    _Result[id.xy - uint2(-1, 0)] = float4(state.x, 1, state.zw);
+    _Result[id.xy - uint2(-1, 0)] = float4(state.x, 1, 1, state.w);
+}
+
+void WaterHorizontalMovement(uint3 id, float4 state, float4 uv, float rightState, float leftState)
+{
+    if (state.z == 0)
+        state.z = 1;
+
+    if (state.z == 1)
+    {
+        if (uv.x < 1 && rightState == 0)
+        {
+            if (_Result[id.xy + uint2(1, 0)].x == 0) // Avoid two water cells merging.
+                MoveRight(id, state);
+        }
+        else
+        {
+            state.z = -1;
+            _Result[id.xy] = state;
+        }
+    }
+    else if (state.z == -1)
+    {
+        if (uv.x > 0 && leftState == 0)
+        {
+            if (_Result[id.xy - uint2(1, 0)].x == 0) // Avoid two water cells merging.
+                MoveLeft(id, state);
+        }
+        else
+        {
+            state.z = 1;
+            _Result[id.xy] = state;
+        }
+    }
 }
 
 [numthreads(8,8,1)]
@@ -84,7 +117,7 @@ void Next(uint3 id : SV_DispatchThreadID)
             }
             else
             {
-                if (hash21(id.xy) > 0.5)
+                if (hash21(id.xy) > 0.5) // Randomize diagonal fall direction.
                 {
                     if (downRightState.x == 0 && rightState.x == 0)
                         MoveDownRight(id, state);
@@ -109,97 +142,23 @@ void Next(uint3 id : SV_DispatchThreadID)
         }
         else
         {
-            // TODO: Randomize water horizontal direction and flip it on collision.
-            
-            if (hash21(id.xy) > 0.5)
+            if (hash21(id.xy) > 0.5) // Randomize diagonal fall direction.
             {
                 if (uv.y > 0 && downRightState.x == 0 && rightState.x == 0)
-                {
-                    state.z = 1;
                     MoveDownRight(id, state);
-                }
                 else if (uv.y > 0 && downLeftState.x == 0 && leftState.x == 0)
-                {
-                    state.z = -1;
                     MoveDownLeft(id, state);
-                }
                 else
-                {
-                    if (state.z == 0)
-                        state.z = 1;
-
-                    if (state.z == 1)
-                    {
-                        if (uv.x < 1 && rightState.x == 0)
-                        {
-                            if (_Result[id.xy + uint2(1, 0)].x == 0)
-                                MoveRight(id, state);
-                        }
-                        else
-                        {
-                            state.z = -1;
-                            _Result[id.xy] = state;
-                        }
-                    }
-                    else if (state.z == -1)
-                    {
-                        if (uv.x > 0 && leftState.x == 0)
-                        {
-                            if (_Result[id.xy - uint2(1, 0)].x == 0)
-                                MoveLeft(id, state);
-                        }
-                        else
-                        {
-                            state.z = 1;
-                            _Result[id.xy] = state;
-                        }
-                    }
-                }
+                    WaterHorizontalMovement(id, state, uv, rightState.x, leftState.x);
             }
             else
             {
                 if (uv.y > 0 && downLeftState.x == 0 && leftState.x == 0)
-                {
-                    state.z = -1;
                     MoveDownLeft(id, state);
-                }
                 else if (uv.y > 0 && downRightState.x == 0 && rightState.x == 0)
-                {
-                    state.z = 1;
                     MoveDownRight(id, state);
-                }
                 else
-                {
-                    if (state.z == 0)
-                        state.z = -1;
-
-                    if (state.z == 1)
-                    {
-                        if (uv.x < 1 && rightState.x == 0)
-                        {
-                            if (_Result[id.xy + uint2(1, 0)].x == 0)
-                                MoveRight(id, state);
-                        }
-                        else
-                        {
-                            state.z = -1;
-                            _Result[id.xy] = state;
-                        }
-                    }
-                    else if (state.z == -1)
-                    {
-                        if (uv.x > 0 && leftState.x == 0)
-                        {
-                            if (_Result[id.xy - uint2(1, 0)].x == 0)
-                                MoveLeft(id, state);
-                        }
-                        else
-                        {
-                            state.z = 1;
-                            _Result[id.xy] = state;
-                        }
-                    }
-                }
+                    WaterHorizontalMovement(id, state, uv, rightState.x, leftState.x);
             }
         }
     }
